@@ -1,6 +1,7 @@
 // type of worker required by the job
 def worker_type = 'dcassany-images-integration'
 def branch_prefix = "images_pr_"
+def updated_images = ""
 
 pipeline {
    agent { node { label "${worker_type}" } }
@@ -15,7 +16,7 @@ pipeline {
         BRANCH_PRJ = "${env.BASE_PRJ}:Branches"
     }
     options {
-        timeout(time: 3, unit: 'HOURS') 
+        timeout(time: 3, unit: 'HOURS')
     }
     stages {
         stage('Prepare environment') { steps {
@@ -40,36 +41,51 @@ pipeline {
             }
             steps { script {
                 prefix = "${env.BRANCH_PRJ}:${branch_prefix}"
-                echo "${env.UTILS} submitMergedPRs ${prefix}"
-
-                //sh(script: "${env.UTILS} submitMergedPRs ${prefix}")
+                sh(script: "${env.UTILS} submitMergedPRs ${prefix}")
                 // TODO trigger Containers:CR -> Containers release job
             }}
         }
 
-        stage('Create image subprojects in Branches'){
+        stage('Check changes in repository'){
             when {
                 expression { env.CHANGE_ID != null }
             }
-            steps { script {
-                sh(script: "${env.UTILS} sentStatuses pending 'Checking changes'")
+            steps { script { try {
+                sh(script: "${env.UTILS} sentStatuses pending 'Checking changes' 'jenkins/check_changes'")
                 branch = "images_pr_${env.CHANGE_ID}"
-                project = "${env.BRANCH_PRJ}:${branch}" 
+                project = "${env.BRANCH_PRJ}:${branch}"
                 updated_images = sh(
                     script: "${env.UTILS} listUpdatedImages", returnStdout: true
                 ).trim()
                 sh(script: "${env.UTILS} checkVersionChange '${updated_images}'")
-                sh(script: "${env.UTILS} sentStatuses pending 'Branching images'")
-                sh(script: "${env.UTILS} branchImages ${branch} '${updated_images}'")
-                sh(script: "${env.UTILS} sentStatuses pending 'Building images'") 
-                sh(script: "${env.UTILS} waitForImagesBuild ${project} '${updated_images}'")
-                sh(script: "${env.UTILS} sentStatuses success 'Images build succeeded'")
-            }}
+                sh(script: "${env.UTILS} sentStatuses success 'Check done' 'jenkins/check_changes'")
+            } catch (err) {
+                echo err.getMessage()
+                sh(script: "${env.UTILS} sentStatuses failure 'Check failed' 'jenkins/check_changes'")
+                error("Error: basic PR checks failed")
+            }}}
         }
 
-        stage('Run tests') {
+        stage('Create image subprojects in Branches'){
             when {
-                expression { env.CHANGE_ID != null }
+                expression { env.CHANGE_ID != null && "${updated_images}" != ""}
+            }
+            steps { script { try {
+                sh(script: "${env.UTILS} sentStatuses pending 'Branching images' 'jenkins/create_branches'")
+                sh(script: "${env.UTILS} branchImages ${branch} '${updated_images}'")
+                sh(script: "${env.UTILS} sentStatuses success 'Building images' 'jenkins/create_branches'")
+                sh(script: "${env.UTILS} waitForImagesBuild ${project} '${updated_images}'")
+                sh(script: "${env.UTILS} sentStatuses success 'Images build succeeded' 'jenkins/create_branches'")
+            } catch (err) {
+                echo err.getMessage()
+                sh(script: "${env.UTILS} sentStatuses failure 'Build failed' 'jenkins/create_branches'")
+                error("Error: branches creation or images build failed in OBS")
+            }}}
+        }
+
+        stage('Post build checks') {
+            when {
+                expression { env.CHANGE_ID != null && "${updated_images}" != ""}
             }
             steps { script {
                 echo "to be completed. Branched images '${updated_images}'"

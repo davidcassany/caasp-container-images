@@ -12,7 +12,7 @@ set -e
 : "${G_API:=https://api.github.com}"
 : "${G_REPO:=caasp-container-images}"
 : "${G_ORG:=davidcassany}"
-: "${JOB_URI:=https://ci.suse.de}"
+: "${BUILD_URL:=https://ci.suse.de}"
 
 function _gitRoot {
     cd "$(git rev-parse --show-toplevel)"
@@ -46,9 +46,6 @@ function checkVersionChange {
     local images=${1}
     local branch=${2:-${TARGET_BRANCH}}
 
-    echo "images value: ${images}"
-    echo "branch value: ${branch}"
-
     for img in ${images}; do
         git diff "${branch}" -- "${img}" | grep -q "^+.*</version>" || \
             _abort "Error: '${img}' does not include any image version change!"
@@ -64,6 +61,7 @@ function submitMergedPRs {
     local prefix=$1
     local pr
 
+    msg="Automated submission from Jenkins CI"
     for prj in $(oscCmd ls / | grep "${prefix}"); do
         pr=${prj##${prefix}}
         if checkPRisMerged "${pr}"; then
@@ -72,9 +70,8 @@ function submitMergedPRs {
                 for img in $(ls | grep caasp-*-image); do
                     pushd "${img}" > /dev/null
                         checkLastCommit
-                        req=$(oscCmd sr --yes -m "Automated submission from CI")
-                        oscCmd request accept "${reg}" \
-                            -m "Automated submission from CI"
+                        req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
+                        oscCmd request accept -m "${msg}" "${req}"
                     popd > /dev/null
                 done
             popd > /dev/null
@@ -95,8 +92,7 @@ function checkPRisMerged {
     local repo=${3:-${G_REPO}}
     local api=${4:-${G_API}}
 
-    curl -s ${api}/repos/${org}/${repo}/pulls/${pr} | \
-         jq 'select( .state == "closed") | contains( .merged == true)' -e
+    curl -sf "${api}/repos/${org}/${repo}/pulls/${pr}/merge"
 }
 
 function listUpdatedImages {
@@ -166,22 +162,21 @@ function waitForImagesBuild {
 function sentStatuses {
     local status=$1
     local desc=$2
-    local url=${3:-${JOB_URI}}
+    local context=${3:-continuous-integration/jenkins}
     local org=${4:-${G_ORG}}
     local repo=${5:-${G_REPO}}
     local token=${6:-${GITHUB_TOKEN}}
+    local url=${7:-${BUILD_URL}}
 
     commit=$(git rev-parse HEAD)
-    status_json="{\"state\": \"${status}\", \"target_url\": \"${url}\", \"description\": \"${desc}\", \"context\": \"continuous-integration/jenkins\"}"
-    echo "${G_API}/repos/${org}/${repo}/statuses/${commit}?access_token=${GITHUB_ACCESS}"
-    curl "${G_API}/repos/${org}/${repo}/statuses/${commit}?access_token=${GITHUB_ACCESS}" \
-        -H  "Content-Type: application/json" -X POST -d "${status_json}"
+    status_json="{\"state\": \"${status}\", \"target_url\": \"${url}\", \"description\": \"${desc}\", \"context\": \"${context}\"}"
+    curl -sS "${G_API}/repos/${org}/${repo}/statuses/${commit}?access_token=${GITHUB_ACCESS}" \
+        -H  "Content-Type: application/json" -X POST -d "${status_json}" > /dev/null
 }
 
 _gitRoot || _abort "Not inside the git repository"
 
 _cmdCheck osc
-_cmdCheck jq
 _cmdCheck curl
 
 _setOSCAuth
