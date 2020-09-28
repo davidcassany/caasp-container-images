@@ -55,7 +55,8 @@ function checkVersionChange {
 
 function oscCmd {
     [[ -f ${IBS_CONFIG} ]] || _abort "No IBS config file provided"
-    osc --config="${IBS_CONFIG}" $@
+    echo "osc --config=${IBS_CONFIG} $@"
+    osc --config="${IBS_CONFIG}" "$@"
 }
 
 function submitMergedPRs {
