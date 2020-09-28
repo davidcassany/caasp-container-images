@@ -83,7 +83,7 @@ function submitMergedPRs {
 function checkLastCommit {
     local usr
 
-    usr=$(osc log --csv | head -n1 | cut -d"|" -f2)
+    usr=$(oscCmd log --csv | head -n1 | cut -d"|" -f2)
     [[ "${usr}" == "${IBS_USR}" ]] || _abort "Last commit is not by ${IBS_USR}"
 }
 
