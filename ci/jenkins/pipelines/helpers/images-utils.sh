@@ -72,6 +72,7 @@ function submitMergedPRs {
                     pushd "${img}" > /dev/null
                         checkLastCommit
                         req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
+                        echo "request created: ${req}"
                         oscCmd request accept -m "${msg}" "${req}"
                     popd > /dev/null
                 done
@@ -83,8 +84,9 @@ function submitMergedPRs {
 function checkLastCommit {
     local usr
 
-    usr=$(osc log --csv | head -n1 | cut -d"|" -f2)
-    [[ "${usr}" == "${IBS_USR}" ]] || _abort "Last commit is not by ${IBS_USR}"
+    usr=$(oscCmd log --csv | head -n1 | cut -d"|" -f2)
+    echo "Last commit user is: ${usr}"
+    [[ "${usr}" == "${IBS_USR}" ]] || _abort "Last commit is not by OBS bot"
 }
 
 function checkPRisMerged {
