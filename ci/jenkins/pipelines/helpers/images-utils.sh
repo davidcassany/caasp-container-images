@@ -115,8 +115,10 @@ function branchImages {
 
     for img in ${images}; do
         flags="-f --add-repositories"
-        oscCmd ls "${srcPrj}" "${img}" >/dev/null || flags+=" -N"
-        oscCmd branch "${flags}" "${srcPrj}" "${img}" "${branchPrj}:${branchName}"
+        echo "${img}"
+        oscCmd ls "${srcPrj}" "${img}" > /dev/null || flags+=" -N"
+        echo "branch ${flags} ${srcPrj} ${img} ${branchPrj}:${branchName}"
+        oscCmd branch ${flags} "${srcPrj}" "${img}" "${branchPrj}:${branchName}"
         updateImageFromSource "${branchPrj}:${branchName}" "${img}"
     done
 }
