@@ -55,7 +55,6 @@ function checkVersionChange {
 
 function oscCmd {
     [[ -f ${IBS_CONFIG} ]] || _abort "No IBS config file provided"
-    echo "osc --config=${IBS_CONFIG} $@"
     osc --config="${IBS_CONFIG}" "$@"
 }
 
@@ -75,6 +74,7 @@ function submitMergedPRs {
                         req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
                         echo "request created: ${req}"
                         oscCmd request accept -m "${msg}" "${req}"
+                        echo "request accepted: ${req}"
                     popd > /dev/null
                 done
             popd > /dev/null
