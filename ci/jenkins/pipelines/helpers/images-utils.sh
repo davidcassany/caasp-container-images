@@ -13,6 +13,7 @@ set -e
 : "${G_REPO:=caasp-container-images}"
 : "${G_ORG:=davidcassany}"
 : "${BUILD_URL:=https://ci.suse.de}"
+: "${IMG_NAME_PATTERN:=caasp-.*-image}"
 
 function _gitRoot {
     cd "$(git rev-parse --show-toplevel)"
@@ -66,9 +67,9 @@ function submitMergedPRs {
         pr=${prj##${prefix}}
         if checkPRisMerged "${pr}"; then
             oscCmd co "${prefix}${pr}"
-            pushd "${prefix}${pr}" 
-                for img in $(ls | grep "caasp-*-image"); do
-                    pushd "${img}"
+            pushd "${prefix}${pr}" > /dev/null
+                for img in $(ls | grep "${IMG_NAME_PATTERN}"); do
+                    pushd "${img}" > /dev/null
                         checkLastCommit
                         req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
                         oscCmd request accept -m "${msg}" "${req}"
