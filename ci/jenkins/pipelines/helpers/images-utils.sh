@@ -71,10 +71,9 @@ function submitMergedPRs {
                 for img in $(ls | grep "${IMG_NAME_PATTERN}"); do
                     pushd "${img}" > /dev/null
                         checkLastCommit
-                        req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
-                        echo "request created: ${req}"
+                        req=$(oscCmd sr --yes -m "${msg}" --cleanup | \
+                            grep -Eo [[:digit:]]{6})
                         oscCmd request accept -m "${msg}" "${req}"
-                        echo "request accepted: ${req}"
                     popd > /dev/null
                 done
             popd > /dev/null
