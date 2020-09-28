@@ -66,9 +66,9 @@ function submitMergedPRs {
         pr=${prj##${prefix}}
         if checkPRisMerged "${pr}"; then
             oscCmd co "${prefix}${pr}"
-            pushd "${prefix}${pr}" > /dev/null
-                for img in $(ls | grep caasp-*-image); do
-                    pushd "${img}" > /dev/null
+            pushd "${prefix}${pr}" 
+                for img in $(ls | grep "caasp-*-image"); do
+                    pushd "${img}"
                         checkLastCommit
                         req=$(oscCmd sr --yes -m "${msg}" | grep -Eo [[:digit:]]{6})
                         oscCmd request accept -m "${msg}" "${req}"
