@@ -11,7 +11,7 @@ set -e
 : "${API:=https://api.suse.de}"
 : "${G_API:=https://api.github.com}"
 : "${G_REPO:=caasp-container-images}"
-: "${G_ORG:=davidcassany}"
+: "${G_ORG:=SUSE}"
 : "${BUILD_URL:=https://ci.suse.de}"
 : "${IMG_NAME_PATTERN:=caasp-.*-image}"
 
@@ -167,7 +167,7 @@ function waitForImagesBuild {
 function sentStatuses {
     local status=$1
     local desc=$2
-    local context=${3:-continuous-integration/jenkins}
+    local context="jenkins/${3:-continuous-integration}"
     local org=${4:-${G_ORG}}
     local repo=${5:-${G_REPO}}
     local token=${6:-${GITHUB_TOKEN}}
