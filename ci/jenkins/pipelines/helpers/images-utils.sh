@@ -121,6 +121,8 @@ function branchImages {
         oscCmd branch ${flags} "${srcPrj}" "${img}" "${branchPrj}:${branchName}"
         updateImageFromSource "${branchPrj}:${branchName}" "${img}"
     done
+    oscCmd api -X POST \
+        "/source/${branchPrj}:${branchName}?cmd=set_flag&flag=publish&status=enable"
 }
 
 function updateImageFromSource {
